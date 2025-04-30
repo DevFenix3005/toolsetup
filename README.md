@@ -10,7 +10,7 @@ Welcome to my personal dotfiles setup script! This script automates the installa
 | `bat` | Prettier `cat` with syntax highlighting |
 | `htop` | Interactive process viewer |
 | `btop` | Modern `htop` with animations |
-| `exa` | Enhanced `ls` with icons |
+| `eza` | Enhanced `ls` with icons |
 | `fzf` | Fuzzy finder for terminal |
 | `ripgrep` | Fast file search |
 | `tldr` | Simplified man pages |
