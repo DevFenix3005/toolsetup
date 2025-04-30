@@ -42,6 +42,9 @@ chmod +x tools.sh
 ```bash
 ./tools.sh
 ```
+# Screenshot
+![my terminal screenshoet](https://github.com/DevFenix3005/toolsetup/blob/main/Screenshot%20from%202025-04-30%2016-37-47.png)
+
 
 4. Restart your terminal or source your `.zshrc`:
 ```bash
