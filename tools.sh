@@ -5,7 +5,7 @@ echo "🔄 Actualizando sistema..."
 sudo apt update && sudo apt upgrade -y
 
 # Herramientas visuales y estéticas
-sudo apt install -y neofetch bat htop exa fzf ripgrep tldr fortune cowsay fd-find duf ruby curl
+sudo apt install -y neofetch bat htop eza fzf ripgrep tldr fortune cowsay fd-find duf ruby curl
 
 echo "🌈 Instalando lolcat"
 sudo gem install lolcat
