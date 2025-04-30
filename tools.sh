@@ -26,7 +26,7 @@ echo "neofetch" >> "$ZSHRC"
 echo "eval \"\$(starship init zsh)\"" >> "$ZSHRC"
 echo "eval \"\$(zoxide init zsh)\"" >> "$ZSHRC"
 echo "alias cat=\"batcat\"" >> "$ZSHRC"
-echo "alias ls=\"exa -lh --icons\"" >> "$ZSHRC"
+echo "alias ls=\"eza -lh --icons\"" >> "$ZSHRC"
 echo "alias please=\"sudo\"" >> "$ZSHRC"
 echo "fortune | cowsay | lolcat" >> "$ZSHRC"
 
