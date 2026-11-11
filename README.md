@@ -1,17 +1,19 @@
 # ✨ Robert-tan's Sugoi Terminal Setup ✨
 
-My personal setup script for a colorful, productive Ubuntu terminal 🐧💻✨
+My personal setup script for a colorful, productive terminal on Ubuntu, Debian, and Raspberry Pi 🐧💻✨
 
-Targets **Ubuntu 26.04 LTS (Resolute Raccoon)**. Package availability was checked against Ubuntu's package listings on **2026-09-25**, when [Ubuntu 26.04.1 LTS](https://ubuntu.com/download/desktop) was the latest stable release. The script requires Ubuntu 26.04 or newer, **Zsh already installed**, an internet connection, and a regular user with `sudo` access.
+Supports **Ubuntu 26.04 LTS or newer**, **Debian 13 (Trixie) or newer**, and **Raspberry Pi OS based on Debian 13 or newer**. The same `tools.sh` detects the distribution through `/etc/os-release` (`ubuntu`, `debian`, or `raspbian`). It requires **Zsh already installed**, an internet connection, and a regular user with `sudo` access.
+
+The package list was checked against Ubuntu 26.04 on **2026-09-25** and Debian 13 Trixie for **arm64 and armhf** on **2026-11-11**. [Raspberry Pi OS](https://www.raspberrypi.com/documentation/computers/os.html) uses Debian repositories on 64-bit systems and Raspbian repositories on 32-bit systems. After refreshing APT, the installer checks every package for an installation candidate in your configured repositories. If any are missing for your system, it lists them and stops before installing the tools or changing your Zsh configuration.
 
 ## 💾 What's Included
 
-All CLI tools are installed through Ubuntu's APT repositories, with Universe enabled by the script.
+All CLI tools are installed through your system's APT repositories. The script enables Universe on Ubuntu; Debian and Raspberry Pi OS use their existing repositories. The package links below point to Ubuntu 26.04; the same package names are used in [Debian Trixie](https://packages.debian.org/trixie/).
 
 | Command | APT package | Description |
 |---------|-------------|-------------|
 | `fastfetch` | [fastfetch](https://packages.ubuntu.com/resolute/fastfetch) | System info with ASCII art; replaces Neofetch |
-| `bat`, `cat` | [bat](https://packages.ubuntu.com/resolute/bat) | Syntax highlighting through the Ubuntu `batcat` command |
+| `bat`, `cat` | [bat](https://packages.ubuntu.com/resolute/bat) | Syntax highlighting through the `batcat` command on Debian and Ubuntu |
 | `htop` | [htop](https://packages.ubuntu.com/resolute/htop) | Interactive process viewer |
 | `btop` | [btop](https://packages.ubuntu.com/resolute/btop) | Resource monitor with graphs |
 | `eza`, `ls` | [eza](https://packages.ubuntu.com/resolute/eza) | Enhanced file listing with icons |
@@ -23,7 +25,7 @@ All CLI tools are installed through Ubuntu's APT repositories, with Universe ena
 | `lolcat` | [lolcat](https://packages.ubuntu.com/resolute/lolcat) | Rainbow terminal output |
 | `starship` | [starship](https://packages.ubuntu.com/resolute/starship) | Customizable prompt |
 | `zoxide` | [zoxide](https://packages.ubuntu.com/resolute/zoxide) | Smarter directory navigation |
-| `fd` | [fd-find](https://packages.ubuntu.com/resolute/fd-find) | Fast file finder through Ubuntu's `fdfind` command |
+| `fd` | [fd-find](https://packages.ubuntu.com/resolute/fd-find) | Fast file finder through the `fdfind` command on Debian and Ubuntu |
 | `duf` | [duf](https://packages.ubuntu.com/resolute/duf) | Disk usage overview |
 | `delta` | [git-delta](https://packages.ubuntu.com/resolute/git-delta) | Git diffs with syntax highlighting and line numbers |
 | `atuin` | [atuin](https://packages.ubuntu.com/resolute/atuin) | Searchable shell history with directory and session filters |
@@ -45,7 +47,7 @@ The script checks for the `zsh` executable **before anything else**. If it is mi
 
    ```bash
    sudo apt-get update
-   sudo apt-get install -y zsh git curl ca-certificates software-properties-common
+   sudo apt-get install -y zsh git curl ca-certificates
    ```
 
 2. Optionally install [Oh My Zsh](https://ohmyz.sh/) **before** running this setup. It is not required; skip this step if it is already installed.
@@ -63,7 +65,7 @@ The script checks for the `zsh` executable **before anything else**. If it is mi
    ./tools.sh
    ```
 
-   The script uses `sudo` for package installation, refreshes the package index, and enables Universe. It does not run a full system upgrade.
+   These commands also apply to Raspberry Pi running Debian 13 Trixie or Raspberry Pi OS Trixie. The script uses `sudo` for package installation, refreshes the package index, and enables Universe when running on Ubuntu. It does not run a full system upgrade.
 
 4. Start Zsh to load the configuration:
 
@@ -100,9 +102,10 @@ Previous copies installed with Snap, RubyGems, or the upstream Starship/zoxide i
 ```bash
 bash -n tools.sh
 bash tests/test-config.sh
+bash tests/test-platform.sh
 ```
 
-The tests use temporary homes and do not install packages. They verify that missing Zsh stops the installer without changes, and cover configuration migration, repeated runs, backups, custom `ZDOTDIR`, and preservation of personal settings.
+The tests use temporary directories and simulated package-manager commands; they do not install packages. They verify platform detection, repository selection, package availability checks, failure handling, and that missing Zsh stops the installer without changes. They also cover configuration migration, repeated runs, backups, custom `ZDOTDIR`, and preservation of personal settings. Platform fixtures simulate Debian/Raspberry Pi environments; they do not execute the tools on ARM hardware.
 
 ## 📸 Screenshot
 

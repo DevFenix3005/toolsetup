@@ -52,7 +52,7 @@ configure_zsh() {
 
     cat >> "$config_tmp" <<'ZSH'
 # >>> toolsetup >>>
-# Ubuntu installs fortune/cowsay/lolcat in /usr/games.
+# Debian and Ubuntu install fortune/cowsay/lolcat in /usr/games.
 typeset -U path
 path=(/usr/games $path)
 
@@ -112,38 +112,41 @@ ZSH
     printf '🧁 Configuración actualizada: %s\n' "$zshrc"
 }
 
-main() {
-    # This prerequisite must be checked before any installation or file changes.
-    if ! command -v zsh >/dev/null 2>&1; then
-        printf 'Error: se necesita instalar Zsh antes de continuar.\n' >&2
-        printf 'Instálalo primero con: sudo apt-get install zsh\n' >&2
-        printf 'Después vuelve a ejecutar: bash tools.sh\n' >&2
-        return 1
-    fi
-    if [[ ! -r /etc/os-release ]]; then
-        printf 'Este instalador requiere Ubuntu 26.04 LTS o posterior.\n' >&2
+detect_platform() {
+    local os_release="${1:-/etc/os-release}"
+    # Do not let inherited values fill in fields missing from os-release.
+    local ID= VERSION_ID= PRETTY_NAME= minimum_version
+    if [[ ! -r "$os_release" ]]; then
+        printf 'Este instalador requiere Ubuntu 26.04+, Debian 13+ o Raspberry Pi OS basado en Debian 13+.\n' >&2
         return 1
     fi
     # shellcheck source=/dev/null
-    . /etc/os-release
-    if [[ "${ID:-}" != ubuntu ]] || ! dpkg --compare-versions "${VERSION_ID:-0}" ge 26.04; then
-        printf 'Este instalador requiere Ubuntu 26.04 LTS o posterior (detectado: %s).\n' "${PRETTY_NAME:-desconocido}" >&2
+    . "$os_release"
+    case "$ID" in
+        ubuntu) minimum_version=26.04 ;;
+        debian|raspbian) minimum_version=13 ;;
+        *) minimum_version= ;;
+    esac
+    if [[ -z "$minimum_version" ]] ||
+       ! dpkg --compare-versions "${VERSION_ID:-0}" ge "$minimum_version"; then
+        printf 'Este instalador requiere Ubuntu 26.04+, Debian 13+ o Raspberry Pi OS basado en Debian 13+ (detectado: %s).\n' "${PRETTY_NAME:-desconocido}" >&2
         return 1
     fi
-    if (( EUID == 0 )); then
-        printf 'Ejecuta ./tools.sh como tu usuario habitual, sin sudo; el script pedirá permisos cuando los necesite.\n' >&2
-        return 1
-    fi
-    if ! command -v sudo >/dev/null 2>&1; then
-        printf 'Se necesita sudo para instalar los paquetes.\n' >&2
-        return 1
-    fi
+    platform_id="$ID"
+    platform_name="${PRETTY_NAME:-$ID}"
+}
 
-    echo '🔄 Actualizando índices de paquetes y habilitando Universe...'
-    sudo apt-get update
-    sudo apt-get install -y software-properties-common
-    sudo add-apt-repository -y universe
-    sudo apt-get update
+install_packages() {
+    local platform_id="$1" platform_name="$2"
+    printf '🐧 Sistema detectado: %s\n' "$platform_name"
+    echo '🔄 Actualizando índices de paquetes...'
+    sudo apt-get update || return
+    if [[ "$platform_id" == ubuntu ]]; then
+        echo '📦 Habilitando Universe para Ubuntu...'
+        sudo apt-get install -y software-properties-common || return
+        sudo add-apt-repository -y universe || return
+        sudo apt-get update || return
+    fi
 
     # Package names differ from command names: batcat, rg, tldr, fortune, fdfind.
     local packages=(
@@ -153,8 +156,50 @@ main() {
         git-delta atuin ncdu jq tmux
         zsh-autosuggestions zsh-syntax-highlighting
     )
-    echo '📦 Instalando herramientas desde los repositorios de Ubuntu...'
+    # Query the configured repositories for this system's native architecture.
+    # In particular, Raspberry Pi OS 32-bit uses Raspbian rather than Debian.
+    local package candidate
+    local missing_packages=()
+    for package in "${packages[@]}"; do
+        if ! candidate="$(LC_ALL=C apt-cache policy "$package" |
+            awk '$1 == "Candidate:" { print $2 }')"; then
+            printf 'Error: no se pudo consultar APT para %s.\n' "$package" >&2
+            return 1
+        fi
+        if [[ -z "$candidate" || "$candidate" == '(none)' ]]; then
+            missing_packages+=("$package")
+        fi
+    done
+    if (( ${#missing_packages[@]} > 0 )); then
+        printf 'Error: no hay candidato APT para: %s.\n' "${missing_packages[*]}" >&2
+        printf 'Revisa los repositorios de %s para tu arquitectura y vuelve a ejecutar el instalador.\n' "$platform_name" >&2
+        return 1
+    fi
+
+    echo '📦 Instalando herramientas desde los repositorios de tu sistema...'
     sudo apt-get install -y "${packages[@]}"
+}
+
+main() {
+    # This prerequisite must be checked before any installation or file changes.
+    if ! command -v zsh >/dev/null 2>&1; then
+        printf 'Error: se necesita instalar Zsh antes de continuar.\n' >&2
+        printf 'Instálalo primero con: sudo apt-get install zsh\n' >&2
+        printf 'Después vuelve a ejecutar: bash tools.sh\n' >&2
+        return 1
+    fi
+    local platform_id platform_name
+    detect_platform || return
+    if (( EUID == 0 )); then
+        printf 'Ejecuta ./tools.sh como tu usuario habitual, sin sudo; el script pedirá permisos cuando los necesite.\n' >&2
+        return 1
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        printf 'Se necesita sudo para instalar los paquetes.\n' >&2
+        return 1
+    fi
+
+    install_packages "$platform_id" "$platform_name" || return
 
     configure_zsh
 
