@@ -81,6 +81,10 @@ The managed Zsh configuration sets `GIT_PAGER='delta --line-numbers'` when Delta
 
 Atuin is initialized in interactive Zsh sessions; use `Ctrl+R` to search history. Account registration, synchronization, and importing existing history are optional manual steps; the installer does not perform them.
 
+Before updating `.zshrc`, the installer prepares Atuin's configuration and data directories and checks `atuin init zsh`. If a required directory inside your home blocks access because it belongs to root (for example, `~/.config`), the script uses `sudo chown` with your current UID/GID to repair that directory. It also restores owner access when necessary and creates new directories with mode `700`. Ownership repairs apply to individual directories, without recursively changing their contents.
+
+Atuin paths respect exported `ATUIN_CONFIG_DIR`, `XDG_CONFIG_HOME`, and `XDG_DATA_HOME`. Paths outside your physical home, including symlink targets, must already permit normal user access for the installer to prepare them. If directory preparation or Atuin initialization fails, the installer stops before changing `.zshrc` and reports the error. To repair the previously reported `~/.config/atuin: Permission denied` problem, run the updated `bash tools.sh` as your regular user.
+
 The two Zsh plugins load from their APT-installed files under `/usr/share`. Autosuggestions lets you accept a suggested command with `→`; syntax highlighting loads last in the managed block. If you add other plugins yourself, keep syntax highlighting after them.
 
 ```bash
@@ -103,9 +107,10 @@ Previous copies installed with Snap, RubyGems, or the upstream Starship/zoxide i
 bash -n tools.sh
 bash tests/test-config.sh
 bash tests/test-platform.sh
+bash tests/test-atuin.sh
 ```
 
-The tests use temporary directories and simulated package-manager commands; they do not install packages. They verify platform detection, repository selection, package availability checks, failure handling, and that missing Zsh stops the installer without changes. They also cover configuration migration, repeated runs, backups, custom `ZDOTDIR`, and preservation of personal settings. Platform fixtures simulate Debian/Raspberry Pi environments; they do not execute the tools on ARM hardware.
+The tests use temporary directories and simulated package-manager commands; they do not install packages. They verify platform detection, repository selection, package availability checks, failure handling, and that missing Zsh stops the installer without changes. They also cover configuration migration, repeated runs, backups, custom `ZDOTDIR`, preservation of personal settings, and Atuin directory preparation with selective permission repairs. Permission tests require a non-root Linux user and a filesystem with Unix permissions; unavailable cases are reported as skipped. Platform fixtures simulate Debian/Raspberry Pi environments; they do not execute the tools on ARM hardware.
 
 ## 📸 Screenshot
 

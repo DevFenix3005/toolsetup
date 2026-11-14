@@ -180,6 +180,70 @@ install_packages() {
     sudo apt-get install -y "${packages[@]}"
 }
 
+prepare_atuin_directory() {
+    local directory="$1" physical_home physical_directory owner user_uid user_gid
+    if [[ -e "$directory" && ! -d "$directory" ]] ||
+       [[ -L "$directory" && ! -d "$directory" ]]; then
+        printf 'Error: Atuin necesita un directorio válido en %s.\n' "$directory" >&2
+        return 1
+    fi
+
+    if [[ ! -d "$directory" ]]; then
+        if ! mkdir -p -m 700 -- "$directory"; then
+            printf 'Error: no se pudo crear %s para Atuin. Revisa los permisos de sus directorios padre con namei -l.\n' "$directory" >&2
+            return 1
+        fi
+    fi
+    if [[ -w "$directory" && -x "$directory" ]]; then
+        return 0
+    fi
+
+    # Repair only blocked directories within the user's physical home. Resolving
+    # symlinks also prevents changing ownership through a link to an external path.
+    physical_home="$(realpath -e -- "$HOME")" || return
+    physical_directory="$(realpath -e -- "$directory")" || return
+    user_uid="$(id -u)" || return
+    user_gid="$(id -g)" || return
+    owner="$(stat -L -c %u -- "$directory")" || return
+    if [[ ! -O "$physical_home" || "$physical_directory" != "$physical_home/"* ]] ||
+       [[ "$owner" != 0 && "$owner" != "$user_uid" ]]; then
+        printf 'Error: Atuin necesita escritura y acceso a %s. Revisa sus permisos con namei -l antes de continuar.\n' "$directory" >&2
+        return 1
+    fi
+    if [[ "$owner" == 0 ]]; then
+        printf '🔧 Corrigiendo el propietario de %s para Atuin...\n' "$directory"
+        # Operate on the checked directory itself, never recursively.
+        sudo chown -- "$user_uid:$user_gid" "$physical_directory" || return
+    fi
+    chmod u+rwx -- "$physical_directory" || return
+    if [[ ! -w "$directory" || ! -x "$directory" ]]; then
+        printf 'Error: %s sigue sin ser accesible para Atuin. Revisa sus permisos con namei -l.\n' "$directory" >&2
+        return 1
+    fi
+}
+
+prepare_atuin() {
+    local config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local config_directory="${ATUIN_CONFIG_DIR:-$config_home/atuin}"
+    local data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+
+    echo '🔎 Comprobando los directorios y la configuración de Atuin...'
+    if [[ -z "${ATUIN_CONFIG_DIR:-}" ]]; then
+        prepare_atuin_directory "$config_home" || return
+    fi
+    prepare_atuin_directory "$config_directory" || return
+    if [[ -z "${XDG_DATA_HOME:-}" ]]; then
+        prepare_atuin_directory "$HOME/.local" || return
+    fi
+    prepare_atuin_directory "$data_home" || return
+    prepare_atuin_directory "$data_home/atuin" || return
+
+    if ! atuin init zsh >/dev/null; then
+        printf 'Error: Atuin no pudo iniciar. Revisa el error anterior y los permisos de sus archivos antes de volver a ejecutar tools.sh.\n' >&2
+        return 1
+    fi
+}
+
 main() {
     # This prerequisite must be checked before any installation or file changes.
     if ! command -v zsh >/dev/null 2>&1; then
@@ -200,6 +264,7 @@ main() {
     fi
 
     install_packages "$platform_id" "$platform_name" || return
+    prepare_atuin || return
 
     configure_zsh
 

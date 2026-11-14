@@ -1,0 +1,57 @@
+---
+  config:
+    flowchart:
+      curve: stepBefore
+---
+flowchart TD
+    subgraph initialization [Initialization]
+        Start([Run tools.sh]) --> HasZsh{Zsh installed?}
+        HasZsh -- No --> ZshError[Print prerequisite error]
+        ZshError --> Exit([Exit with error])
+    end
+
+    subgraph detection [Detection]
+        HasZsh -- Yes --> Detect[Read /etc/os-release]
+        Detect --> Supported{Ubuntu 26.04+ or<br/>Debian/Raspbian 13+?}
+        Supported -- No --> PlatformError[Print supported-platform error]
+        PlatformError --> Exit
+        Supported -- Yes --> Root{Running as root?}
+        Root -- Yes --> RootError[Require normal user]
+        RootError --> Exit
+        Root -- No --> HasSudo{sudo available?}
+        HasSudo -- No --> SudoError[Print sudo requirement]
+        SudoError --> Exit
+        HasSudo -- Yes --> AptUpdate[Update APT package indexes]
+    end
+
+    subgraph installation [Installation]
+        AptUpdate --> Ubuntu{Ubuntu?}
+        Ubuntu -- Yes --> EnableUniverse[Install software-properties-common<br/>Enable Universe and update indexes]
+        Ubuntu -- No --> CheckPackages
+        EnableUniverse --> CheckPackages
+
+        CheckPackages[Check each required package has an APT candidate]
+        CheckPackages --> PackagesFound{All packages available?}
+        PackagesFound -- No --> PackageError[Print missing packages and repository guidance]
+        PackageError --> Exit
+        PackagesFound -- Yes --> Install[Install required packages]
+    end
+
+    subgraph configuration [Configuration]
+        Install --> PrepareAtuin[Prepare Atuin config and data directories]
+        PrepareAtuin --> DirsReady{Directories accessible<br/>and atuin init succeeds?}
+        DirsReady -- No --> AtuinError[Report directory or Atuin error]
+        AtuinError --> Exit
+        DirsReady -- Yes --> Configure[Update .zshrc]
+
+        Configure --> Existing{Existing .zshrc?}
+        Existing -- Yes --> Backup[Remove managed block or exact legacy block;<br/>preserve customized content and create backup]
+        Existing -- No --> Append
+        Backup --> Append[Append managed Zsh setup]
+        Append --> Write[Write through existing file to preserve symlinks]
+        Write --> Tldr[Update tldr pages]
+        Tldr --> TldrOk{Update succeeded?}
+        TldrOk -- No --> Warn[Print retry warning]
+        TldrOk -- Yes --> Done
+        Warn --> Done([Print completion and shell instructions])
+    end
